@@ -19,14 +19,14 @@ brain_node:
 
     strategy:
       ball_confidence_threshold: 60.0 
-      ball_memory_timeout: 5.0 
+      ball_memory_timeout: 3.0 
       tm_ball_dist_threshold: 2.0 
       limit_near_ball_speed: false 
       near_ball_speed_limit: 0.4 # 0.2
       near_ball_range: 3.0
       abort_kick_when_ball_moved: true 
       cooperation: 
-        enable_role_switch: false 
+        enable_role_switch: true 
         ball_control_cost_threshold: 20.0 
 
     obstacle_avoidance:

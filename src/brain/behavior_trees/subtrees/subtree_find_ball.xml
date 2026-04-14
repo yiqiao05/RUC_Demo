@@ -5,16 +5,16 @@
      <Sequence name="root">
         <ReactiveSequence>
             <GoBackInField />
-            <CamFastScan />
+             <CamFastScan msecs_interval="120" />
         </ReactiveSequence>
         <TurnOnSpot rad="3.14"  towards_ball="true"/>
         <ReactiveSequence>
             <GoBackInField />
-            <CamFastScan />
+             <CamFastScan msecs_interval="120" />
         </ReactiveSequence>
         <ReactiveSequence>
           <GoToReadyPosition  vx_limit="0.7" />
-          <Sleep msec="5000" />
+            <Sleep msec="2000" />
         </ReactiveSequence>
       </Sequence>
   </BehaviorTree>

@@ -243,8 +243,8 @@ CamFindBall::CamFindBall(const string &name, const NodeConfig &config, Brain *_b
     _cmdSequence[5][1] = leftYaw;
 
     _cmdIndex = 0;
-    _cmdIntervalMSec = 800;
-    _cmdRestartIntervalMSec = 50000;
+    _cmdIntervalMSec = 300;
+    _cmdRestartIntervalMSec = 20000;
     _timeLastCmd = brain->get_clock()->now();
 }
 
@@ -1049,6 +1049,8 @@ NodeStatus GoalieDecide::tick()
     bool angleIsGood = (dir_rb_f > -M_PI / 2 && dir_rb_f < M_PI / 2);
     double ballRange = brain->data->ball.range;
     double ballYaw = brain->data->ball.yawToRobot;
+    auto ballPos = brain->data->ball.posToField;
+    auto robotPose = brain->data->robotPoseToField;
 
     string newDecision;
     auto color = 0xFFFFFFFF; 
@@ -1059,7 +1061,12 @@ NodeStatus GoalieDecide::tick()
         newDecision = "find";
         color = 0x0000FFFF;
     }
-    else if (brain->data->ball.posToField.x > 0 - static_cast<double>(lastDecision == "retreat"))
+    else if (robotPose.x > -0.1)
+    {
+        newDecision = "retreat";
+        color = 0xFF00FFFF;
+    }
+    else if (ballPos.x > -0.2 - static_cast<double>(lastDecision == "retreat"))
     {
         newDecision = "retreat";
         color = 0xFF00FFFF;
