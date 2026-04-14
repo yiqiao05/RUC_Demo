@@ -28,6 +28,8 @@ brain_node:
       cooperation: 
         enable_role_switch: true 
         ball_control_cost_threshold: 0.8 
+        lead_switch_gain_margin: 0.4
+        lead_switch_hold_msecs: 1500.0
 
     obstacle_avoidance:
       depth_sample_step: 16 

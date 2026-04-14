@@ -71,6 +71,8 @@ Brain::Brain() : rclcpp::Node("brain_node")
     declare_parameter<double>("strategy.shoot.ymax", 0.5);
     declare_parameter<bool>("strategy.cooperation.enable_role_switch", true);
     declare_parameter<double>("strategy.cooperation.ball_control_cost_threshold", 10.0);
+    declare_parameter<double>("strategy.cooperation.lead_switch_gain_margin", 0.4);
+    declare_parameter<double>("strategy.cooperation.lead_switch_hold_msecs", 1500.0);
 
     declare_parameter<int>("obstacle_avoidance.depth_sample_step", 16);
     declare_parameter<double>("obstacle_avoidance.obstacle_min_height", 0.15);
@@ -489,20 +491,31 @@ void Brain::handleCooperation() {
         if (tmStatus.cost < tmMinCost) tmMinCost = tmStatus.cost;
     }
     double LEAD_SWITCH_MARGIN = 0.8;
+    double LEAD_GAIN_MARGIN = 0.4;
+    double LEAD_SWITCH_HOLD_MSECS = 1500.0;
     get_parameter("strategy.cooperation.ball_control_cost_threshold", LEAD_SWITCH_MARGIN);
+    get_parameter("strategy.cooperation.lead_switch_gain_margin", LEAD_GAIN_MARGIN);
+    get_parameter("strategy.cooperation.lead_switch_hold_msecs", LEAD_SWITCH_HOLD_MSECS);
 
-    if (data->tmMyCost > tmMinCost + LEAD_SWITCH_MARGIN) {
-
-        data->tmImLead = false;
-        tree->setEntry<bool>("is_lead", false);
-        log_("I am not lead");
-
+    static rclcpp::Time lastLeadSwitchTime = get_clock()->now();
+    bool curLead = data->tmImLead;
+    bool targetLead = curLead;
+    if (curLead) {
+        if (data->tmMyCost > tmMinCost + LEAD_SWITCH_MARGIN) targetLead = false;
     } else {
-        data->tmImLead = true;
-        tree->setEntry<bool>("is_lead", true);
-        log_("I am Lead");
+        if (data->tmMyCost <= tmMinCost + LEAD_GAIN_MARGIN) targetLead = true;
     }
-    log_(format("tmMinCost: %.1f, myCost: %.1f", tmMinCost, data->tmMyCost));
+    if (targetLead != curLead && msecsSince(lastLeadSwitchTime) < LEAD_SWITCH_HOLD_MSECS) {
+        targetLead = curLead;
+    }
+    if (targetLead != curLead) {
+        lastLeadSwitchTime = get_clock()->now();
+    }
+
+    data->tmImLead = targetLead;
+    tree->setEntry<bool>("is_lead", targetLead);
+    log_(targetLead ? "I am Lead" : "I am not lead");
+    log_(format("tmMinCost: %.1f, myCost: %.1f, switchMargin: %.2f, gainMargin: %.2f", tmMinCost, data->tmMyCost, LEAD_SWITCH_MARGIN, LEAD_GAIN_MARGIN));
 
 
     if (

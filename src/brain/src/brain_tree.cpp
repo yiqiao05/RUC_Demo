@@ -440,6 +440,18 @@ NodeStatus Chase::tick()
     vtheta = alpha * vtheta + (1 - alpha) * lastVtheta;
     lastVx = vx; lastVy = vy; lastVtheta = vtheta;
 
+    string role = brain->tree->getEntry<string>("player_role");
+    if (role == "goal_keeper") {
+        static double lastGoalieVy = 0.0;
+        const double maxGoalieVtheta = 0.8;
+        const double maxGoalieVyDelta = 0.18;
+        vtheta = cap(vtheta, maxGoalieVtheta, -maxGoalieVtheta);
+        double vyDelta = vy - lastGoalieVy;
+        vyDelta = cap(vyDelta, maxGoalieVyDelta, -maxGoalieVyDelta);
+        vy = lastGoalieVy + vyDelta;
+        lastGoalieVy = vy;
+    }
+
     brain->client->setVelocity(vx, vy, vtheta, false, false, false);
     
     // 可视化
@@ -989,8 +1001,27 @@ NodeStatus StrikerDecide::tick() {
         newDecision = "find";
         color = 0xFFFFFFFF;
     } else if (!brain->data->tmImLead) {
-        newDecision = "assist";
-        color = 0x00FFFFFF;
+        auto fd = brain->config->fieldDimensions;
+        bool ballInDangerZone = ball.posToField.x < (-fd.length / 2.0 + fd.penaltyAreaLength + 0.8);
+        bool opponentNearBall = false;
+        auto robots = brain->data->getRobots();
+        for (const auto &rbt : robots) {
+            if (rbt.label != "Opponent" && rbt.label != "Person") continue;
+            double distRbtBall = norm(rbt.posToField.x - ball.posToField.x, rbt.posToField.y - ball.posToField.y);
+            if (distRbtBall < 1.0) {
+                opponentNearBall = true;
+                break;
+            }
+        }
+        bool closeEnoughTakeover = ballRange < 1.1 && fabs(ballYaw) < 0.7;
+        bool allowAssistTakeover = ballInDangerZone || opponentNearBall || closeEnoughTakeover;
+        if (allowAssistTakeover) {
+            newDecision = "chase";
+            color = 0xFF8800FF;
+        } else {
+            newDecision = "assist";
+            color = 0x00FFFFFF;
+        }
     } else if (ballRange > chaseRangeThreshold * (lastDecision == "chase" ? 0.9 : 1.0))
     {
         newDecision = "chase";
