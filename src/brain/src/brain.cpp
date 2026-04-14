@@ -813,9 +813,9 @@ void Brain::updateCostToKick() {
     log_(format("ajust cost: %.1f", fabs(toPInPI(data->kickDir - data->robotBallAngleToField)) * 0.4 / 0.3));
     
 
-    if (data->recoveryState == RobotRecoveryState::HAS_FALLEN) {
-        cost += 15.0;
-        log_(format("fall cost: %.1f", 15.0));  
+    if (data->recoveryState != RobotRecoveryState::IS_READY) {
+        cost += 50.0;
+        log_(format("fall/recovery cost: %.1f", 50.0));  
     }
 
     
@@ -854,6 +854,7 @@ bool Brain::isAngleGood(double goalPostMargin, string type) {
 bool Brain::isPrimaryStriker() {
     string myRole = tree->getEntry<string>("player_role");
     if (myRole != "striker") return false; 
+    if (data->recoveryState != RobotRecoveryState::IS_READY) return false;
 
     if (!config->enableCom) return true; 
 

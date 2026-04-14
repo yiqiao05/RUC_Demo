@@ -688,36 +688,31 @@ NodeStatus Assist::tick() {
     auto fd = brain->config->fieldDimensions;
     auto ballPos = brain->data->ball.posToField;
     auto robotPose = brain->data->robotPoseToField;
-    string curRole = brain->tree->getEntry<string>("player_role");
+    auto robots = brain->data->getRobots();
 
-    bool isSecondary = false; 
-    bool has2Assists = false;
-    int selfIdx = brain->config->playerId - 1;
-    for (int i = 0; i < HL_MAX_NUM_PLAYERS; i++) {
-        if (i == selfIdx) continue; 
-
-        auto tmStatus = brain->data->tmStatus[i];
-        if (!tmStatus.isAlive) continue; 
-        if (tmStatus.isLead) continue; 
-        if (tmStatus.role != "striker") continue; 
-
-        has2Assists = true;
-        log("2 assists found");
-        if (tmStatus.robotPoseToField.x > robotPose.x) {
-            log("i am secondary");
-            isSecondary = true; 
+    bool foundThreat = false;
+    GameObject threat;
+    double bestThreatScore = 1e9;
+    for (const auto &rbt : robots) {
+        if (rbt.label != "Opponent" && rbt.label != "Person") continue;
+        double threatScore = norm(rbt.posToField.x + fd.length / 2.0, rbt.posToField.y);
+        if (threatScore < bestThreatScore) {
+            bestThreatScore = threatScore;
+            threat = rbt;
+            foundThreat = true;
         }
     }
-    log(format("has2Assists: %d, isSecondary: %d", has2Assists, isSecondary));
-
 
     Pose2D targetPose;
-    targetPose.x = isSecondary ? ballPos.x - 4.0 : ballPos.x - 2.0;
-    targetPose.x = max(targetPose.x, - fd.length / 2.0 + distToGoalline); 
-    targetPose.y = ballPos.y * (targetPose.x + fd.length / 2.0) / (ballPos.x + fd.length / 2.0); 
-    if (has2Assists) { 
-        targetPose.y += isSecondary ? - 0.5 : 0.5;
+    if (foundThreat) {
+        targetPose.x = cap(threat.posToField.x - 1.2, 0.0, -fd.length / 2.0 + distToGoalline);
+        targetPose.y = cap(threat.posToField.y, fd.width / 2.0 - 0.5, -fd.width / 2.0 + 0.5);
+    } else {
+        targetPose.x = min(ballPos.x - 2.0, -fd.length / 2.0 + distToGoalline + 1.0);
+        targetPose.x = min(targetPose.x, 0.0 - 0.2);
+        targetPose.y = cap(ballPos.y * 0.6, fd.width / 2.0 - 0.5, -fd.width / 2.0 + 0.5);
     }
+    log(format("foundThreat: %d, targetPose: (%.2f, %.2f)", foundThreat, targetPose.x, targetPose.y));
 
 
     double dist = norm(targetPose.x - robotPose.x, targetPose.y - robotPose.y);
