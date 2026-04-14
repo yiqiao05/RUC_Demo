@@ -488,10 +488,10 @@ void Brain::handleCooperation() {
         auto tmStatus = data->tmStatus[tmIdx];
         if (tmStatus.cost < tmMinCost) tmMinCost = tmStatus.cost;
     }
-    double BALL_CONTROL_COST_THRESHOLD = 3.0;
-    get_parameter("strategy.cooperation.ball_control_cost_threshold", BALL_CONTROL_COST_THRESHOLD);
+    double LEAD_SWITCH_MARGIN = 0.8;
+    get_parameter("strategy.cooperation.ball_control_cost_threshold", LEAD_SWITCH_MARGIN);
 
-    if (tmMinCost < BALL_CONTROL_COST_THRESHOLD && data->tmMyCost > tmMinCost) {
+    if (data->tmMyCost > tmMinCost + LEAD_SWITCH_MARGIN) {
 
         data->tmImLead = false;
         tree->setEntry<bool>("is_lead", false);
@@ -858,22 +858,8 @@ bool Brain::isPrimaryStriker() {
 
     if (!config->enableCom) return true; 
 
-    // find first alive striker that is not me.
-    auto firstAliveStrikerIdx = -1;
-    auto myIdx = config->playerId - 1;
-
-    for (int i = 0; i < HL_MAX_NUM_PLAYERS; i++) {
-        auto status = data->tmStatus[i];
-        if (data->penalty[i] == PENALTY_NONE && status.isAlive && status.role == "striker") {
-            firstAliveStrikerIdx = i;
-            break;
-        }
-    }
-
-    if ( firstAliveStrikerIdx >= 0 && firstAliveStrikerIdx <  myIdx) return false; // 有 id 更小的活的前锋, 让他来当主力
-
-    // else 没有 id 更小的活的前锋, 我是主力
-    return true;
+    // 主前锋由实时协作成本决定，允许前锋与协助者动态互换。
+    return data->tmImLead;
 }
 
 bool Brain::isBallOut(double locCompareDist, double lineCompareDist)
